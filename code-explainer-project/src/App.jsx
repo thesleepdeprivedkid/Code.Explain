@@ -70,15 +70,18 @@ const EXT_TO_LANG={
 };
 
 let sessionCounter=1;
-const newSession=()=>({
-  id:Date.now(),
-  label:`session ${sessionCounter++}`,
-  code:"",language:"Auto-detect",
-  results:{explain:null,breakdown:null,eli5:null},
-  complexity:null,corrections:null,
-  translation:null,translateTo:"Python",
-  activeTab:"explain",highlightedLine:null,
-});
+const newSession=()=>{
+  const n=sessionCounter++;
+  return {
+    id:n,
+    label:`session ${n}`,
+    code:"",language:"Auto-detect",
+    results:{explain:null,breakdown:null,eli5:null},
+    complexity:null,corrections:null,
+    translation:null,translateTo:"Python",
+    activeTab:"explain",highlightedLine:null,
+  };
+};
 
 export default function CodeExplainer(){
   const [sessions,setSessions]=useState([newSession()]);
@@ -126,9 +129,16 @@ export default function CodeExplainer(){
     if(sess.code.length>8000){setError("Code too long. Keep it under 8000 chars.");return;}
     setError("");
     // Auto-name session from first meaningful line of code
-    const firstLine = sess.code.trim().split("\n").find(l=>l.trim().length>3&&!l.trim().startsWith("//")&&!l.trim().startsWith("#"))||"";
-    const autoLabel = firstLine.slice(0,28).trim()+(firstLine.length>28?"...":"");
-    if(autoLabel) updateSess({label:autoLabel});
+    const codeSnippet = sess.code.slice(0, 300);
+    const namingRes = await getClient().chat.completions.create({
+      model:"llama-3.3-70b-versatile", max_tokens:20,
+      messages:[
+        {role:"system",content:"Reply with ONLY a short 2-4 word name for this code snippet. Examples: 'Quick Sort', 'Binary Search', 'Linked List', 'HTTP Handler'. No punctuation, no explanation."},
+        {role:"user",content:codeSnippet},
+      ],
+    });
+    const autoLabel = namingRes.choices[0]?.message?.content?.trim().slice(0,30)||`session ${sess.id}`;
+    updateSess({label:autoLabel});
     updateSess({results:{explain:null,breakdown:null,eli5:null},complexity:null,corrections:null,translation:null});
     const client=getClient();
 
@@ -579,7 +589,7 @@ export default function CodeExplainer(){
                         <span>IMPROVED CODE</span>
                         <button className="btn btn-ghost" style={{fontSize:"0.63rem",padding:"0.18rem 0.55rem"}} onClick={()=>navigator.clipboard.writeText(sess.corrections.improved_code)}>copy</button>
                       </div>
-                      <div className="improved-code">{sess.corrections.improved_code}</div>
+                      <div className="improved-code">{sess.corrections.improved_code.replace(/\\n/g,"\n").replace(/\\t/g,"  ")}</div>
                     </>)}
                   </div>
                 )}
