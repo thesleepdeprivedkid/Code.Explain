@@ -353,7 +353,7 @@ export default function CodeExplainer(){
         .error-line{font-family:'DM Mono',monospace;font-size:0.68rem;color:#f08080;flex-shrink:0;}
         .error-issue{font-size:0.8rem;color:#d6d3ca;}
         .opt-item{display:flex;gap:0.5rem;margin-bottom:0.45rem;}
-        .improved-code{background:#0d0d0d;border:1px solid #2a3a2a;border-radius:8px;padding:1rem;margin-top:0.75rem;font-family:'DM Mono',monospace;font-size:0.76rem;color:#a8d8a8;overflow-x:auto;white-space:pre;}
+        .improved-code{background:#0d0d0d;border:1px solid #2a3a2a;border-radius:8px;padding:1rem;margin-top:0.75rem;font-family:'DM Mono',monospace;font-size:0.76rem;color:#a8d8a8;overflow-x:auto;white-space:pre-wrap;}
         .section-label{font-family:'DM Mono',monospace;font-size:0.68rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.7rem;}
         .samples-row{display:flex;gap:0.5rem;flex-wrap:wrap;padding:0.7rem 1.25rem;border-top:1px solid #1e1e1e;background:#0f0f0f;align-items:center;}
         .sample-pill{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:0.28rem 0.65rem;font-family:'DM Mono',monospace;font-size:0.66rem;color:#777;cursor:pointer;transition:all 0.15s;}
@@ -540,7 +540,7 @@ export default function CodeExplainer(){
                         <span>IMPROVED CODE</span>
                         <button className="btn btn-ghost" style={{fontSize:"0.63rem",padding:"0.18rem 0.55rem"}} onClick={()=>navigator.clipboard.writeText(sess.corrections.improved_code)}>copy</button>
                       </div>
-                      <div className="improved-code">{sess.corrections.improved_code.replace(/\\n/g, '\n')}</div>
+                      <div className="improved-code">{sess.corrections.improved_code}</div>
                     </>)}
                   </div>
                 )}
