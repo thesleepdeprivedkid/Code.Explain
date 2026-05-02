@@ -371,8 +371,8 @@ export default function CodeExplainer(){
         .translate-code{background:#0d0d0d;border:1px solid #1a2a3a;border-radius:8px;padding:1rem;font-family:'DM Mono',monospace;font-size:0.76rem;color:#88ccff;overflow-x:auto;white-space:pre;margin-bottom:1rem;}
         .change-item{display:flex;gap:0.5rem;margin-bottom:0.45rem;}
         .footer-credits{text-align:center;padding:2.5rem 1rem 2rem;margin-top:3rem;border-top:1px solid #1a1a1a;}
-        .footer-credits-name{font-family:'DM Mono',monospace;font-size:0.78rem;color:#555;letter-spacing:0.06em;margin-bottom:0.4rem;}
-        .footer-credits-powered{font-family:'DM Mono',monospace;font-size:0.63rem;color:#333;letter-spacing:0.08em;}
+        .footer-credits-name{font-family:'DM Mono',monospace;font-size:1rem;color:#777;letter-spacing:0.06em;margin-bottom:0.5rem;}
+        .footer-credits-powered{font-family:'DM Mono',monospace;font-size:0.85rem;color:#555;letter-spacing:0.08em;}
         .footer-accent{color:#f0c040;}
         input[type="file"]{display:none;}
         @keyframes spin{to{transform:rotate(360deg);}}
@@ -540,7 +540,7 @@ export default function CodeExplainer(){
                         <span>IMPROVED CODE</span>
                         <button className="btn btn-ghost" style={{fontSize:"0.63rem",padding:"0.18rem 0.55rem"}} onClick={()=>navigator.clipboard.writeText(sess.corrections.improved_code)}>copy</button>
                       </div>
-                      <div className="improved-code">{sess.corrections.improved_code}</div>
+                      <div className="improved-code">{sess.corrections.improved_code.replace(/\\n/g, '\n')}</div>
                     </>)}
                   </div>
                 )}
