@@ -72,7 +72,7 @@ const EXT_TO_LANG={
 let sessionCounter=1;
 const newSession=()=>({
   id:Date.now(),
-  label:`Session ${sessionCounter++}`,
+  label:`session ${sessionCounter++}`,
   code:"",language:"Auto-detect",
   results:{explain:null,breakdown:null,eli5:null},
   complexity:null,corrections:null,
@@ -83,6 +83,9 @@ const newSession=()=>({
 export default function CodeExplainer(){
   const [sessions,setSessions]=useState([newSession()]);
   const [activeSession,setActiveSession]=useState(0);
+  const [sidebarOpen,setSidebarOpen]=useState(true);
+  const [renamingId,setRenamingId]=useState(null);
+  const [renameVal,setRenameVal]=useState("");
   const [loading,setLoading]=useState({explain:false,breakdown:false,eli5:false});
   const [compLoading,setCompLoading]=useState(false);
   const [corrLoading,setCorrLoading]=useState(false);
@@ -122,6 +125,10 @@ export default function CodeExplainer(){
     if(!sess.code.trim()){setError("Paste some code first!");return;}
     if(sess.code.length>8000){setError("Code too long. Keep it under 8000 chars.");return;}
     setError("");
+    // Auto-name session from first meaningful line of code
+    const firstLine = sess.code.trim().split("\n").find(l=>l.trim().length>3&&!l.trim().startsWith("//")&&!l.trim().startsWith("#"))||"";
+    const autoLabel = firstLine.slice(0,28).trim()+(firstLine.length>28?"...":"");
+    if(autoLabel) updateSess({label:autoLabel});
     updateSess({results:{explain:null,breakdown:null,eli5:null},complexity:null,corrections:null,translation:null});
     const client=getClient();
 
@@ -311,9 +318,9 @@ export default function CodeExplainer(){
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
         body{background:#0a0a0a;}
-        .app{min-height:100vh;background:#0f0f0f;color:#e0ddd5;font-family:'Syne',sans-serif;padding:2rem 1rem 0;display:flex;flex-direction:column;}
+        .app{min-height:100vh;background:#0f0f0f;color:#e0ddd5;font-family:'Syne',sans-serif;display:flex;flex-direction:column;}
         .grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(240,192,64,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(240,192,64,0.03) 1px,transparent 1px);background-size:40px 40px;}
-        .container{max-width:1100px;margin:0 auto;position:relative;z-index:1;width:100%;flex:1;}
+        .container{max-width:1100px;margin:0 auto;position:relative;z-index:1;width:100%;}
         .header{margin-bottom:1.5rem;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
         .title{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;line-height:1;letter-spacing:-0.03em;}
         .title-accent{color:#f0c040;}
@@ -353,26 +360,39 @@ export default function CodeExplainer(){
         .error-line{font-family:'DM Mono',monospace;font-size:0.68rem;color:#f08080;flex-shrink:0;}
         .error-issue{font-size:0.8rem;color:#d6d3ca;}
         .opt-item{display:flex;gap:0.5rem;margin-bottom:0.45rem;}
-        .improved-code{background:#0d0d0d;border:1px solid #2a3a2a;border-radius:8px;padding:1rem;margin-top:0.75rem;font-family:'DM Mono',monospace;font-size:0.76rem;color:#a8d8a8;overflow-x:auto;white-space:pre-wrap;}
+        .improved-code{background:#0d0d0d;border:1px solid #2a3a2a;border-radius:8px;padding:1rem;margin-top:0.75rem;font-family:'DM Mono',monospace;font-size:0.76rem;color:#a8d8a8;overflow-x:auto;white-space:pre;}
         .section-label{font-family:'DM Mono',monospace;font-size:0.68rem;color:#555;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.7rem;}
         .samples-row{display:flex;gap:0.5rem;flex-wrap:wrap;padding:0.7rem 1.25rem;border-top:1px solid #1e1e1e;background:#0f0f0f;align-items:center;}
         .sample-pill{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:0.28rem 0.65rem;font-family:'DM Mono',monospace;font-size:0.66rem;color:#777;cursor:pointer;transition:all 0.15s;}
         .sample-pill:hover{border-color:#f0c040;color:#f0c040;}
         .spinner{width:18px;height:18px;border:2px solid #2a2a2a;border-top-color:#f0c040;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
-        .session-bar{display:flex;gap:0.25rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;}
-        .session-tab{display:flex;align-items:center;gap:0.4rem;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:0.35rem 0.65rem;font-family:'DM Mono',monospace;font-size:0.68rem;color:#666;cursor:pointer;transition:all 0.15s;}
-        .session-tab:hover{border-color:#444;color:#999;}
-        .session-tab.active{border-color:#f0c040;color:#f0c040;background:#1a1800;}
-        .session-close{color:#444;font-size:0.8rem;padding:0 0.1rem;cursor:pointer;line-height:1;}
-        .session-close:hover{color:#f08080;}
-        .session-add{background:transparent;border:1px dashed #2a2a2a;border-radius:8px;padding:0.35rem 0.7rem;font-family:'DM Mono',monospace;font-size:0.68rem;color:#444;cursor:pointer;transition:all 0.15s;}
-        .session-add:hover{border-color:#555;color:#888;}
+        .layout{display:flex;gap:0;min-height:100vh;position:relative;}
+        .sidebar{width:220px;min-width:220px;background:#0d0d0d;border-right:1px solid #1e1e1e;display:flex;flex-direction:column;transition:width 0.2s,min-width 0.2s;overflow:hidden;flex-shrink:0;}
+        .sidebar.collapsed{width:0;min-width:0;border-right:none;}
+        .sidebar-header{padding:0.75rem 1rem;border-bottom:1px solid #1e1e1e;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+        .sidebar-title{font-family:'DM Mono',monospace;font-size:0.63rem;color:#444;text-transform:uppercase;letter-spacing:0.1em;}
+        .sidebar-toggle{background:none;border:none;color:#555;cursor:pointer;font-size:1rem;padding:0.1rem 0.3rem;border-radius:4px;transition:color 0.15s;}
+        .sidebar-toggle:hover{color:#f0c040;}
+        .sidebar-list{flex:1;overflow-y:auto;padding:0.5rem;}
+        .sess-item{display:flex;align-items:center;gap:0.4rem;padding:0.5rem 0.6rem;border-radius:7px;cursor:pointer;transition:background 0.15s;margin-bottom:0.2rem;border:1px solid transparent;}
+        .sess-item:hover{background:#161616;border-color:#2a2a2a;}
+        .sess-item.active{background:#1a1800;border-color:#f0c04044;}
+        .sess-name{font-family:'DM Mono',monospace;font-size:0.66rem;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+        .sess-item.active .sess-name{color:#f0c040;}
+        .sess-rename-input{font-family:'DM Mono',monospace;font-size:0.66rem;color:#f0c040;background:#1a1800;border:1px solid #f0c04066;border-radius:4px;padding:0.1rem 0.3rem;outline:none;width:100%;}
+        .sess-close{color:#333;font-size:0.75rem;cursor:pointer;flex-shrink:0;line-height:1;padding:0 0.1rem;border-radius:3px;}
+        .sess-close:hover{color:#f08080;background:#2a1010;}
+        .sidebar-add{margin:0.5rem;padding:0.5rem;background:transparent;border:1px dashed #2a2a2a;border-radius:7px;font-family:'DM Mono',monospace;font-size:0.63rem;color:#444;cursor:pointer;transition:all 0.15s;text-align:center;}
+        .sidebar-add:hover{border-color:#555;color:#888;}
+        .main-content{flex:1;min-width:0;padding:2rem 1.5rem 0;}
+        .sidebar-open-btn{position:fixed;left:0;top:50%;transform:translateY(-50%);background:#0d0d0d;border:1px solid #2a2a2a;border-left:none;border-radius:0 6px 6px 0;padding:0.6rem 0.3rem;cursor:pointer;color:#555;font-size:0.8rem;z-index:10;transition:color 0.15s;}
+        .sidebar-open-btn:hover{color:#f0c040;}
         .translate-body{padding:1.25rem 1.5rem;}
         .translate-code{background:#0d0d0d;border:1px solid #1a2a3a;border-radius:8px;padding:1rem;font-family:'DM Mono',monospace;font-size:0.76rem;color:#88ccff;overflow-x:auto;white-space:pre;margin-bottom:1rem;}
         .change-item{display:flex;gap:0.5rem;margin-bottom:0.45rem;}
         .footer-credits{text-align:center;padding:2.5rem 1rem 2rem;margin-top:3rem;border-top:1px solid #1a1a1a;}
-        .footer-credits-name{font-family:'DM Mono',monospace;font-size:1rem;color:#777;letter-spacing:0.06em;margin-bottom:0.5rem;}
-        .footer-credits-powered{font-family:'DM Mono',monospace;font-size:0.85rem;color:#555;letter-spacing:0.08em;}
+        .footer-credits-name{font-family:'DM Mono',monospace;font-size:0.78rem;color:#555;letter-spacing:0.06em;margin-bottom:0.4rem;}
+        .footer-credits-powered{font-family:'DM Mono',monospace;font-size:0.63rem;color:#333;letter-spacing:0.08em;}
         .footer-accent{color:#f0c040;}
         input[type="file"]{display:none;}
         @keyframes spin{to{transform:rotate(360deg);}}
@@ -381,9 +401,39 @@ export default function CodeExplainer(){
         @media(max-width:700px){.complexity-grid{grid-template-columns:1fr;}}
       `}</style>
 
-      <div className="app">
+      <div className="app" style={{padding:0}}>
         <div className="grid-bg"/>
-        <div className="container">
+        <div className="layout">
+          {/* Sidebar */}
+          <div className={`sidebar ${sidebarOpen?"":"collapsed"}`}>
+            <div className="sidebar-header">
+              <span className="sidebar-title">Sessions</span>
+              <button className="sidebar-toggle" onClick={()=>setSidebarOpen(false)} title="Collapse">◀</button>
+            </div>
+            <div className="sidebar-list">
+              {sessions.map((s,i)=>(
+                <div key={s.id} className={`sess-item ${i===activeSession?"active":""}`} onClick={()=>setActiveSession(i)}
+                  onDoubleClick={()=>{setRenamingId(s.id);setRenameVal(s.label);}}>
+                  {renamingId===s.id?(
+                    <input className="sess-rename-input" value={renameVal} autoFocus
+                      onChange={e=>setRenameVal(e.target.value)}
+                      onBlur={()=>{setSessions(prev=>prev.map((x)=>x.id===s.id?{...x,label:renameVal||x.label}:x));setRenamingId(null);}}
+                      onKeyDown={e=>{if(e.key==="Enter"||e.key==="Escape"){setSessions(prev=>prev.map((x)=>x.id===s.id?{...x,label:renameVal||x.label}:x));setRenamingId(null);}}}
+                      onClick={e=>e.stopPropagation()}/>
+                  ):(
+                    <span className="sess-name" title={s.label}>{s.label}</span>
+                  )}
+                  {sessions.length>1&&<span className="sess-close" onClick={(e)=>{e.stopPropagation();removeSession(i,e);}}>×</span>}
+                </div>
+              ))}
+            </div>
+            <button className="sidebar-add" onClick={addSession}>+ new session</button>
+          </div>
+          {!sidebarOpen&&<button className="sidebar-open-btn" onClick={()=>setSidebarOpen(true)} title="Open sessions">▶</button>}
+
+          {/* Main content */}
+          <div className="main-content">
+          <div className="container" style={{padding:0,maxWidth:"100%"}}>
 
           <div className="header">
             <div>
@@ -391,17 +441,6 @@ export default function CodeExplainer(){
               <div className="subtitle">// paste code → get clarity → understand more</div>
             </div>
             <div className="badge">GROQ · LLAMA 3.3 70B</div>
-          </div>
-
-          {/* Session bar */}
-          <div className="session-bar">
-            {sessions.map((s,i)=>(
-              <div key={s.id} className={`session-tab ${i===activeSession?"active":""}`} onClick={()=>setActiveSession(i)}>
-                {s.label}
-                {sessions.length>1&&<span className="session-close" onClick={(e)=>removeSession(i,e)}>×</span>}
-              </div>
-            ))}
-            <button className="session-add" onClick={addSession}>+ new session</button>
           </div>
 
           {/* Config */}
@@ -568,7 +607,7 @@ export default function CodeExplainer(){
                       <span>TRANSLATED CODE ({sess.translateTo})</span>
                       <button className="btn btn-ghost" style={{fontSize:"0.63rem",padding:"0.18rem 0.55rem"}} onClick={()=>navigator.clipboard.writeText(sess.translation.translated_code)}>copy</button>
                     </div>
-                    <div className="translate-code">{sess.translation.translated_code.replace(/\\n/g, '\n')}</div>
+                    <div className="translate-code">{sess.translation.translated_code}</div>
                     {sess.translation.changes?.length>0&&(<>
                       <div className="section-label">CHANGES MADE</div>
                       {sess.translation.changes.map((c,i)=>(
@@ -584,6 +623,8 @@ export default function CodeExplainer(){
 
             </div>
           )}
+        </div>
+        </div>
         </div>
 
         <footer className="footer-credits">
