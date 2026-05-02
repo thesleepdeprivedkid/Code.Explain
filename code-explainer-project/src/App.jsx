@@ -568,7 +568,7 @@ export default function CodeExplainer(){
                       <span>TRANSLATED CODE ({sess.translateTo})</span>
                       <button className="btn btn-ghost" style={{fontSize:"0.63rem",padding:"0.18rem 0.55rem"}} onClick={()=>navigator.clipboard.writeText(sess.translation.translated_code)}>copy</button>
                     </div>
-                    <div className="translate-code">{sess.translation.translated_code}</div>
+                    <div className="translate-code">{sess.translation.translated_code.replace(/\\n/g, '\n')}</div>
                     {sess.translation.changes?.length>0&&(<>
                       <div className="section-label">CHANGES MADE</div>
                       {sess.translation.changes.map((c,i)=>(
